@@ -1,8 +1,8 @@
 
 <h1 align="center">
   <br>
-  <a href="https://github.com/context-labs/uwu"><img src="./assets/uwu.jpg" alt="uwu" width="200" style="border-radius:8px;"></a>
-  <br>
+  <a href="https://github.com/context-labs/uwu"><img src="https://raw.githubusercontent.com/context-labs/uwu/main/assets/uwu.jpg" alt="uwu" width="200" style="border-radius:8px;"></a>
+   <br>
   uwu
   <br>
 </h1>
@@ -36,7 +36,7 @@
 `uwu` is not a replacement for comprehensive agentic development tools -- it is simple tool that excels at one thing. Consider it the terminal equivalent of quickly searching "how do I..." and getting an immediately runnable answer.
 
 
-![uwu demo](./assets/uwu.gif)
+![uwu demo](https://raw.githubusercontent.com/context-labs/uwu/main/assets/uwu.gif)
 
 
 After a response is generated, you can edit it before pressing enter to execute the command. This is useful if you want to add flags, or other modifications to the command.
