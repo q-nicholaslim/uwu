@@ -5,7 +5,7 @@
   "private": true,
   "scripts": {
     "dev": "bun run index.ts",
-    "build": "bun build ./index.ts --compile --outfile uwu"
+    "build": "bun build ./index.ts --compile --outfile dist/uwu-cli"
   },
   "devDependencies": {
     "@types/bun": "latest"
