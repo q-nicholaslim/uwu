@@ -101,16 +101,15 @@ source ~/.zshrc
 
 ---
 
-## ✅ Usage
+## Usage
 
 Once installed and configured:
 
 ```bash
-uwu make a new git branch and push it
+uwu generate a new ssh key called uwu-keyand add it to the ssh agent
 ```
 
-You'll see the generated command in your shell's input line.  
-Press **Enter** to run it, or edit it first.
+You'll see the generated command in your shell's input line. Press **Enter** to run it, or edit it first. Executed commands will show up in your shell's history just like any other command.
 
 ## License
 
