@@ -60,7 +60,6 @@ bun run build
 
 This will produce the `uwu-cli` binary in the `dist/` build output directory.
 
----
 
 ### 3. Make the binary executable and move it into your PATH
 ```bash
@@ -68,7 +67,6 @@ chmod +x dist/uwu-cli
 mv dist/uwu-cli /usr/local/bin/uwu-cli
 ```
 
----
 
 ### 4. Set your OpenAI API key
 `uwu-cli` requires `OPENAI_API_KEY` to be set in your shell environment.
@@ -76,8 +74,6 @@ mv dist/uwu-cli /usr/local/bin/uwu-cli
 ```bash
 export OPENAI_API_KEY="your_api_key_here"
 ```
-
----
 
 ### 5. Add the `uwu` helper function to your `~/.zshrc`
 This function lets you type `uwu <description>` and get an editable command preloaded in your shell.
@@ -98,8 +94,6 @@ After editing `~/.zshrc`, reload it:
 ```bash
 source ~/.zshrc
 ```
-
----
 
 ## Usage
 
