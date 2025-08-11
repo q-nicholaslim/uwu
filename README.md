@@ -69,11 +69,12 @@ mv dist/uwu-cli /usr/local/bin/uwu-cli
 
 
 ### 4. Set your OpenAI API key
-`uwu-cli` requires `OPENAI_API_KEY` to be set in your shell environment.
+`uwu` requires `OPENAI_API_KEY` to be set in your shell environment.
 
 ```bash
 export OPENAI_API_KEY="your_api_key_here"
 ```
+`uwu` uses GPT-5 by default. There is not currently a way to change the model, please consider submitting a PR to add this feature.
 
 ### 5. Add the `uwu` helper function to your `~/.zshrc`
 This function lets you type `uwu <description>` and get an editable command preloaded in your shell.
