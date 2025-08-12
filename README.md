@@ -109,9 +109,20 @@ You'll see the generated command in your shell's input line. Press **Enter** to 
 
 ## Advanced Usage
 
-`uwu` can be configured to use different models and API providers.
+`uwu` can be configured to use different models and API providers through command-line flags and environment variables.
 
-### Flags
+### Configuration
+
+#### Environment Variables
+*   `OPENAI_API_KEY`: Sets your API key.
+*   `UWU_MODEL`: Sets a custom default model to use instead of `gpt-4.1`. This is useful if you primarily use a local model with Ollama or another provider.
+
+    ```bash
+    # Set your default model to llama3
+    export UWU_MODEL="llama3"
+    ```
+
+#### Flags
 
 *   `--api-key`, `-k`: Your API key.
 *   `--model`, `-m`: The model to use (e.g., `gpt-4`, `claude-3-opus-20240229`).

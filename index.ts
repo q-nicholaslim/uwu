@@ -4,7 +4,7 @@ import os from "os";
 
 // Parse command line arguments
 let apiKey = process.env.OPENAI_API_KEY;
-let model = "gpt-4.1";
+let model = process.env.UWU_MODEL || "gpt-4.1";
 let baseURL = undefined;
 const commandArgs: string[] = [];
 
