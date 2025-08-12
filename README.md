@@ -69,15 +69,13 @@ mv dist/uwu-cli /usr/local/bin/uwu-cli
 
 
 ### 4. Configuration
-`uwu` is configured through a `config.json` file located in a platform-specific directory. When you run `uwu` for the first time, it will look for this file to get its settings.
+`uwu` is configured through a `config.json` file. The first time you run `uwu`, it will automatically create this file and the necessary directories for you.
 
 #### Configuration File Location
-The `config.json` file should be placed in the following directory, depending on your operating system:
+The `config.json` file is located in a platform-specific directory, depending on your operating system:
 *   **Linux:** `~/.config/uwu/config.json`
 *   **macOS:** `~/Library/Application Support/uwu/config.json`
 *   **Windows:** `%APPDATA%\\uwu\\config.json` (e.g., `C:\\Users\\<user>\\AppData\\Roaming\\uwu\\config.json`)
-
-You may need to create the `uwu` directory yourself.
 
 #### Configuration Options
 Here is an example of a `config.json` file:
@@ -90,7 +88,7 @@ Here is an example of a `config.json` file:
 }
 ```
 
-*   `apiKey` (string): Your API key for the service you want to use. `uwu` can also use the `OPENAI_API_KEY` environment variable as a fallback if this is not set.
+*   `apiKey` (string): Your API key. The tool prioritizes the key set in this file. However, if `apiKey` is missing or set to an empty string (`""`), `uwu` will fall back to using the `OPENAI_API_KEY` environment variable.
 *   `model` (string): The model you want to use. Defaults to `"gpt-4.1"` if not specified.
 *   `baseURL` (string | null): The base URL for the API. This is useful for connecting to local models like Ollama or other OpenAI-compatible services.
 

@@ -20,12 +20,30 @@ function getConfig(): Config {
   const configPath = path.join(paths.config, "config.json");
 
   if (!fs.existsSync(configPath)) {
-    // If the config file doesn't exist, we'll use defaults.
-    // We'll check for the API key from the environment as a fallback.
-    return {
-      ...DEFAULT_CONFIG,
-      apiKey: process.env.OPENAI_API_KEY,
-    };
+    try {
+      // If the config file doesn't exist, create it with defaults.
+      fs.mkdirSync(paths.config, { recursive: true });
+      const defaultConfigToFile = {
+        ...DEFAULT_CONFIG,
+        apiKey: "",
+        baseURL: null,
+      };
+      fs.writeFileSync(
+        configPath,
+        JSON.stringify(defaultConfigToFile, null, 2)
+      );
+
+      // For this first run, use the environment variable for the API key.
+      // The newly created file has an empty key, so subsequent runs will also fall back to the env var until the user edits the file.
+      return {
+        ...DEFAULT_CONFIG,
+        apiKey: process.env.OPENAI_API_KEY,
+      };
+    } catch (error) {
+      console.error("Error creating the configuration file at:", configPath);
+      console.error("Please check your permissions for the directory.");
+      process.exit(1);
+    }
   }
 
   try {
