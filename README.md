@@ -68,13 +68,40 @@ mv dist/uwu-cli /usr/local/bin/uwu-cli
 ```
 
 
-### 4. Set your OpenAI API key
-`uwu` requires `OPENAI_API_KEY` to be set in your shell environment.
+### 4. Set your LLM provider
+
+`uwu` supports both OpenAI and Ollama as LLM providers. By default, OpenAI is used.
+
+To select your provider, set the `UWU_PROVIDER` environment variable:
+
+```bash
+# For OpenAI (default)
+export UWU_PROVIDER="openai"
+
+# For Ollama
+export UWU_PROVIDER="ollama"
+```
+`uwu` uses OpenAI and GPT-5 by default. There is not currently a way to change the OpenAI model, please consider submitting a PR to add this feature.
+
+#### If using OpenAI
+
+Set your API key:
 
 ```bash
 export OPENAI_API_KEY="your_api_key_here"
 ```
-`uwu` uses GPT-5 by default. There is not currently a way to change the model, please consider submitting a PR to add this feature.
+
+#### If using Ollama
+
+Set the base URL of your Ollama instance and specify the model to use:
+
+```bash
+# If not configured, these default values will be used
+export OLLAMA_BASE_URL="http://localhost:11434"
+export OLLAMA_MODEL="gemma3:4b"
+```
+
+Replace `http://localhost:11434` with the actual URL of your Ollama instance, and `llama3` with your preferred model.
 
 ### 5. Add the `uwu` helper function to your `~/.zshrc`
 This function lets you type `uwu <description>` and get an editable command preloaded in your shell.

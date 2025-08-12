@@ -1,4 +1,6 @@
 import OpenAI from 'openai';
+import { configSchema } from './config';
+import fetch from 'node-fetch';
 import { $ } from "bun";
 import os from "os";
 
@@ -10,13 +12,24 @@ if (args.length === 0) {
   process.exit(1);
 }
 
-// Join all arguments to handle multi-word descriptions with proper spacing
 const commandDescription = args.join(' ').trim();
-
 if (!commandDescription) {
   console.error("Error: Command description cannot be empty.");
   process.exit(1);
 }
+
+// Read config from environment variables
+const config = configSchema.parse({
+  provider: process.env.UWU_PROVIDER || 'openai',
+  openai: {
+    apiKey: process.env.OPENAI_API_KEY,
+    model: process.env.OPENAI_MODEL || 'gpt-4.1',
+  },
+  ollama: {
+    baseUrl: process.env.OLLAMA_BASE_URL || 'http://localhost:11434',
+    model: process.env.OLLAMA_MODEL || 'gemma3:4b',
+  },
+});
 
 // Build the environment context
 const envContext = `
@@ -62,22 +75,53 @@ Command description:
 ${commandDescription}
 `;
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+async function getCommandFromProvider() {
+  if (config.provider === 'openai') {
+    const openai = new OpenAI({
+      apiKey: config.openai?.apiKey,
+    });
+    const response = await openai.chat.completions.create({
+      model: config.openai?.model || 'gpt-4.1',
+      messages: [
+        {
+          role: "system",
+          content: systemPrompt,
+        },
+        {
+          role: "user",
+          content: userPrompt(commandDescription),
+        },
+      ],
+    });
+    return response?.choices[0]?.message?.content?.trim();
+  } else if (config.provider === 'ollama') {
+    // Ollama API expects a POST to /api/chat with { model, messages }
+    const res = await fetch(`${config.ollama?.baseUrl}/api/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: config.ollama?.model || 'llama3',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: userPrompt(commandDescription) },
+        ],
+        stream: false,
+      }),
+    });
+    const rawText = await res.text();
+    if (!res.ok) {
+      throw new Error(`Ollama API error: ${res.status} ${rawText}`);
+    }
+    const data = JSON.parse(rawText) as { message?: { content?: string } };
+    return data.message?.content?.trim();
+  } else {
+    throw new Error(`Unknown provider: ${config.provider}`);
+  }
+}
 
-const response = await openai.chat.completions.create({
-  model: "gpt-4.1",
-  messages: [
-    {
-      role: "system",
-      content: systemPrompt,
-    },
-    {
-      role: "user",
-      content: userPrompt(commandDescription),
-    },
-  ],
-});
-
-console.log(response?.choices[0]?.message?.content?.trim());
+getCommandFromProvider()
+  .then(cmd => console.log(cmd))
+  .catch(err => {
+    console.error('Error:', err);
+    process.exit(1);
+  });
