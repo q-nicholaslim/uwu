@@ -1,54 +1,65 @@
 import OpenAI from 'openai';
 import { $ } from "bun";
 import os from "os";
+import fs from "fs";
+import path from "path";
+import envPaths from "env-paths";
 
-// Parse command line arguments
-let apiKey = process.env.OPENAI_API_KEY;
-let model = process.env.UWU_MODEL || "gpt-4.1";
-let baseURL = undefined;
-const commandArgs: string[] = [];
+interface Config {
+  apiKey?: string;
+  model: string;
+  baseURL?: string;
+}
 
-const args = process.argv.slice(2);
-for (let i = 0; i < args.length; i++) {
-  const arg = args[i];
-  if (arg === "--api-key" || arg === "-k") {
-    if (i + 1 < args.length) {
-      apiKey = args[++i];
-    } else {
-      console.error(`Error: Missing value for ${arg}`);
-      process.exit(1);
-    }
-  } else if (arg === "--model" || arg === "-m") {
-    if (i + 1 < args.length) {
-      model = args[++i];
-    } else {
-      console.error(`Error: Missing value for ${arg}`);
-      process.exit(1);
-    }
-  } else if (arg === "--base-url" || arg === "-b") {
-    if (i + 1 < args.length) {
-      baseURL = args[++i];
-    } else {
-      console.error(`Error: Missing value for ${arg}`);
-      process.exit(1);
-    }
-  } else {
-    commandArgs.push(arg);
+const DEFAULT_CONFIG: Config = {
+  model: "gpt-4.1",
+};
+
+function getConfig(): Config {
+  const paths = envPaths('uwu', { suffix: '' });
+  const configPath = path.join(paths.config, "config.json");
+
+  if (!fs.existsSync(configPath)) {
+    // If the config file doesn't exist, we'll use defaults.
+    // We'll check for the API key from the environment as a fallback.
+    return {
+      ...DEFAULT_CONFIG,
+      apiKey: process.env.OPENAI_API_KEY,
+    };
+  }
+
+  try {
+    const rawConfig = fs.readFileSync(configPath, "utf-8");
+    const userConfig = JSON.parse(rawConfig);
+
+    // Merge user config with defaults, and also check env for API key as a fallback.
+    return {
+      ...DEFAULT_CONFIG,
+      ...userConfig,
+      apiKey: userConfig.apiKey || process.env.OPENAI_API_KEY,
+    };
+  } catch (error) {
+    console.error("Error reading or parsing the configuration file at:", configPath);
+    console.error("Please ensure it is a valid JSON file.");
+    process.exit(1);
   }
 }
 
-const commandDescription = commandArgs.join(' ').trim();
+const config = getConfig();
+
+// The rest of the arguments are the command description
+const commandDescription = process.argv.slice(2).join(' ').trim();
 
 if (!commandDescription) {
   console.error("Error: No command description provided.");
-  console.error("Usage: uwu-cli [--api-key <key>] [--model <model>] [--base-url <url>] <command description>");
+  console.error("Usage: uwu <command description>");
   process.exit(1);
 }
 
 // Only require API key if no base URL is provided
-if (!apiKey && !baseURL) {
+if (!config.apiKey && !config.baseURL) {
   console.error("Error: API key not provided.");
-  console.error("Please provide an API key using the --api-key flag or by setting the OPENAI_API_KEY environment variable, or provide a --base-url.");
+  console.error("Please provide an API key in your config.json file or by setting the OPENAI_API_KEY environment variable.");
   process.exit(1);
 }
 
@@ -97,12 +108,12 @@ ${commandDescription}
 `;
 
 const openai = new OpenAI({
-  apiKey: apiKey,
-  baseURL: baseURL,
+  apiKey: config.apiKey,
+  baseURL: config.baseURL,
 });
 
 const response = await openai.chat.completions.create({
-  model: model,
+  model: config.model,
   messages: [
     {
       role: "system",
