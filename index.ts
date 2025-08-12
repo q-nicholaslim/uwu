@@ -3,18 +3,52 @@ import { $ } from "bun";
 import os from "os";
 
 // Parse command line arguments
+let apiKey = process.env.OPENAI_API_KEY;
+let model = "gpt-4.1";
+let baseURL = undefined;
+const commandArgs: string[] = [];
+
 const args = process.argv.slice(2);
-if (args.length === 0) {
+for (let i = 0; i < args.length; i++) {
+  const arg = args[i];
+  if (arg === "--api-key" || arg === "-k") {
+    if (i + 1 < args.length) {
+      apiKey = args[++i];
+    } else {
+      console.error(`Error: Missing value for ${arg}`);
+      process.exit(1);
+    }
+  } else if (arg === "--model" || arg === "-m") {
+    if (i + 1 < args.length) {
+      model = args[++i];
+    } else {
+      console.error(`Error: Missing value for ${arg}`);
+      process.exit(1);
+    }
+  } else if (arg === "--base-url" || arg === "-b") {
+    if (i + 1 < args.length) {
+      baseURL = args[++i];
+    } else {
+      console.error(`Error: Missing value for ${arg}`);
+      process.exit(1);
+    }
+  } else {
+    commandArgs.push(arg);
+  }
+}
+
+const commandDescription = commandArgs.join(' ').trim();
+
+if (!commandDescription) {
   console.error("Error: No command description provided.");
-  console.error("Usage: ./bin <command description>");
+  console.error("Usage: uwu-cli [--api-key <key>] [--model <model>] [--base-url <url>] <command description>");
   process.exit(1);
 }
 
-// Join all arguments to handle multi-word descriptions with proper spacing
-const commandDescription = args.join(' ').trim();
-
-if (!commandDescription) {
-  console.error("Error: Command description cannot be empty.");
+// Only require API key if no base URL is provided
+if (!apiKey && !baseURL) {
+  console.error("Error: API key not provided.");
+  console.error("Please provide an API key using the --api-key flag or by setting the OPENAI_API_KEY environment variable, or provide a --base-url.");
   process.exit(1);
 }
 
@@ -63,11 +97,12 @@ ${commandDescription}
 `;
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: apiKey,
+  baseURL: baseURL,
 });
 
 const response = await openai.chat.completions.create({
-  model: "gpt-4.1",
+  model: model,
   messages: [
     {
       role: "system",

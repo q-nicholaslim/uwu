@@ -68,13 +68,14 @@ mv dist/uwu-cli /usr/local/bin/uwu-cli
 ```
 
 
-### 4. Set your OpenAI API key
-`uwu` requires `OPENAI_API_KEY` to be set in your shell environment.
+### 4. Configure your API Key
+`uwu` needs an API key to function. You can set it using the `OPENAI_API_KEY` environment variable:
 
 ```bash
 export OPENAI_API_KEY="your_api_key_here"
 ```
-`uwu` uses GPT-5 by default. There is not currently a way to change the model, please consider submitting a PR to add this feature.
+
+Alternatively, you can pass the API key directly using the `--api-key` (or `-k`) flag.
 
 ### 5. Add the `uwu` helper function to your `~/.zshrc`
 This function lets you type `uwu <description>` and get an editable command preloaded in your shell.
@@ -105,6 +106,55 @@ uwu generate a new ssh key called uwu-keyand add it to the ssh agent
 ```
 
 You'll see the generated command in your shell's input line. Press **Enter** to run it, or edit it first. Executed commands will show up in your shell's history just like any other command.
+
+## Advanced Usage
+
+`uwu` can be configured to use different models and API providers.
+
+### Flags
+
+*   `--api-key`, `-k`: Your API key.
+*   `--model`, `-m`: The model to use (e.g., `gpt-4`, `claude-3-opus-20240229`).
+*   `--base-url`, `-b`: The base URL of the API endpoint.
+
+### Examples
+
+#### OpenAI
+```bash
+# Using a specific model
+uwu -m gpt-3.5-turbo "find all files larger than 10MB"
+
+# Providing the API key directly
+uwu -k "sk-..." "list all running docker containers"
+```
+
+#### Claude
+You can use `uwu` with Claude models through an OpenAI-compatible proxy.
+```bash
+# Example using a proxy service
+uwu -k <your-claude-key> -m claude-3-opus-20240229 -b <proxy-base-url> "summarize the contents of README.md"
+```
+
+#### Gemini
+You can use `uwu` with Gemini models through an OpenAI-compatible proxy.
+```bash
+# Example using a proxy service
+uwu -k <your-gemini-key> -m gemini-pro -b <proxy-base-url> "what is the current weather"
+```
+
+#### Ollama (local)
+Make sure Ollama is running. No API key is needed.
+```bash
+# Use the llama3 model
+uwu -m llama3 -b http://localhost:11434/v1 "create a new git branch called 'features/new-ui'"
+```
+
+#### LM Studio (local)
+Make sure your local server is running in LM Studio. No API key is needed by default.
+```bash
+# Port 1234 is the default for LM Studio
+uwu -b http://localhost:1234/v1 "refactor the following python code..."
+```
 
 ## License
 
