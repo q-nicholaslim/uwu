@@ -1,0 +1,5 @@
+{
+  "type": "Claude",
+  "apiKey": "your-anthropic-api-key",
+  "model": "claude-3-opus-20240229"
+}

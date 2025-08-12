@@ -1,0 +1,5 @@
+{
+  "type": "OpenAI",
+  "apiKey": "sk-your_openai_api_key",
+  "model": "gpt-4.1"
+}
