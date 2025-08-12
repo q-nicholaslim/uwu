@@ -69,38 +69,69 @@ mv dist/uwu-cli /usr/local/bin/uwu-cli
 
 
 ### 4. Configuration
-`uwu` is configured through a `config.json` file. The first time you run `uwu`, it will automatically create this file and the necessary directories for you.
+`uwu` is configured through a single `config.json` file. The first time you run `uwu`, it will automatically create a default configuration file to get you started.
 
 #### Configuration File Location
-The `config.json` file is located in a platform-specific directory, depending on your operating system:
+The `config.json` file is located in a standard, platform-specific directory:
 *   **Linux:** `~/.config/uwu/config.json`
 *   **macOS:** `~/Library/Application Support/uwu/config.json`
 *   **Windows:** `%APPDATA%\\uwu\\config.json` (e.g., `C:\\Users\\<user>\\AppData\\Roaming\\uwu\\config.json`)
 
-#### Configuration Options
-Here is an example of a `config.json` file:
+#### Provider Types
+You can configure `uwu` to use different AI providers by setting the `type` field in your `config.json`. The supported types are `"OpenAI"`, `"Custom"`, `"Claude"`, and `"Gemini"`.
 
+Below are examples for each provider type.
+
+---
+##### **1. OpenAI (`type: "OpenAI"`)**
+This is the default configuration.
 ```json
 {
+  "type": "OpenAI",
   "apiKey": "sk-your_openai_api_key",
-  "model": "gpt-4.1",
-  "baseURL": null
+  "model": "gpt-4.1"
 }
 ```
+*   `apiKey`: Your OpenAI API key. If this is empty, `uwu` will use the `OPENAI_API_KEY` environment variable.
 
-*   `apiKey` (string): Your API key. The tool prioritizes the key set in this file. However, if `apiKey` is missing or set to an empty string (`""`), `uwu` will fall back to using the `OPENAI_API_KEY` environment variable.
-*   `model` (string): The model you want to use. Defaults to `"gpt-4.1"` if not specified.
-*   `baseURL` (string | null): The base URL for the API. This is useful for connecting to local models like Ollama or other OpenAI-compatible services.
-
-**Example for Ollama:**
-To use `uwu` with a local Ollama server running the `llama3` model, your `config.json` would look like this:
+---
+##### **2. Claude (`type: "Claude"`)**
+Uses the native Anthropic API.
 ```json
 {
-  "model": "llama3",
-  "baseURL": "http://localhost:11434/v1"
+  "type": "Claude",
+  "apiKey": "your-anthropic-api-key",
+  "model": "claude-3-opus-20240229"
 }
 ```
-In this case, no `apiKey` is required.
+*   `apiKey`: Your Anthropic API key.
+
+---
+##### **3. Gemini (`type: "Gemini"`)**
+Uses the native Google Gemini API.
+```json
+{
+  "type": "Gemini",
+  "apiKey": "your-google-api-key",
+  "model": "gemini-pro"
+}
+```
+*   `apiKey`: Your Google AI Studio API key.
+
+---
+##### **4. Custom / Local Models (`type: "Custom"`)**
+This type is for any other OpenAI-compatible API endpoint, such as Ollama, LM Studio, or a third-party proxy service.
+```json
+{
+  "type": "Custom",
+  "model": "llama3",
+  "baseURL": "http://localhost:11434/v1",
+  "apiKey": "ollama"
+}
+```
+*   `model`: The name of the model you want to use (e.g., `"llama3"`).
+*   `baseURL`: The API endpoint for the service.
+*   `apiKey`: An API key, if required by the service. For local models like Ollama, this can often be a non-empty placeholder like `"ollama"`.
 
 ### 5. Add the `uwu` helper function to your `~/.zshrc`
 This function lets you type `uwu <description>` and get an editable command preloaded in your shell.

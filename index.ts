@@ -1,17 +1,23 @@
 import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
+import { GoogleGenerativeAI } from '@google/generative-ai';
 import { $ } from "bun";
 import os from "os";
 import fs from "fs";
 import path from "path";
 import envPaths from "env-paths";
 
+type ProviderType = "OpenAI" | "Custom" | "Claude" | "Gemini";
+
 interface Config {
+  type: ProviderType;
   apiKey?: string;
   model: string;
   baseURL?: string;
 }
 
 const DEFAULT_CONFIG: Config = {
+  type: "OpenAI",
   model: "gpt-4.1",
 };
 
@@ -74,15 +80,9 @@ if (!commandDescription) {
   process.exit(1);
 }
 
-// Only require API key if no base URL is provided
-if (!config.apiKey && !config.baseURL) {
-  console.error("Error: API key not provided.");
-  console.error("Please provide an API key in your config.json file or by setting the OPENAI_API_KEY environment variable.");
-  process.exit(1);
-}
-
-// Build the environment context
-const envContext = `
+async function generateCommand(config: Config, commandDescription: string): Promise<string> {
+  // Build the environment context
+  const envContext = `
 Operating System: ${os.type()} ${os.release()} (${os.platform()} - ${os.arch()})
 Node.js Version: ${process.version}
 Shell: ${process.env.SHELL || "unknown"}
@@ -93,18 +93,17 @@ Total Memory: ${(os.totalmem() / 1024 / 1024).toFixed(0)} MB
 Free Memory: ${(os.freemem() / 1024 / 1024).toFixed(0)} MB
 `;
 
-// Get `ls -l` output (handle potential errors)
-let lsResult = "";
-try {
-  lsResult = await $`ls`.text();
-} catch (error) {
-  console.error("Error getting directory listing:", error);
-  // If ls fails, provide fallback information
-  lsResult = "Unable to get directory listing";
-}
+  // Get `ls -l` output (handle potential errors)
+  let lsResult = "";
+  try {
+    lsResult = await $`ls`.text();
+  } catch (error) {
+    // If ls fails, provide fallback information
+    lsResult = "Unable to get directory listing";
+  }
 
-// System prompt
-const systemPrompt = `
+  // System prompt
+  const systemPrompt = `
 You live in a developer's CLI, helping them convert natural language into CLI commands. 
 Based on the description of the command given, generate the command. Output only the command and nothing else. 
 Make sure to escape characters when appropriate. The result of \`ls -l\` is given with the command. 
@@ -119,29 +118,63 @@ Result of \`ls -l\` in working directory:
 ${lsResult}
 `;
 
-// User prompt
-const userPrompt = (commandDescription: string) => `
-Command description:
-${commandDescription}
-`;
+  if (!config.apiKey) {
+    console.error("Error: API key not found.");
+    console.error("Please provide an API key in your config.json file or by setting the OPENAI_API_KEY environment variable.");
+    process.exit(1);
+  }
 
-const openai = new OpenAI({
-  apiKey: config.apiKey,
-  baseURL: config.baseURL,
-});
+  switch (config.type) {
+    case "OpenAI":
+    case "Custom": {
+      const openai = new OpenAI({
+        apiKey: config.apiKey,
+        baseURL: config.baseURL,
+      });
+      const response = await openai.chat.completions.create({
+        model: config.model,
+        messages: [
+          { role: "system", content: systemPrompt },
+          { role: "user", content: `Command description: ${commandDescription}` },
+        ],
+      });
+      return response?.choices[0]?.message?.content?.trim() || "";
+    }
 
-const response = await openai.chat.completions.create({
-  model: config.model,
-  messages: [
-    {
-      role: "system",
-      content: systemPrompt,
-    },
-    {
-      role: "user",
-      content: userPrompt(commandDescription),
-    },
-  ],
-});
+    case "Claude": {
+      const anthropic = new Anthropic({ apiKey: config.apiKey });
+      const response = await anthropic.messages.create({
+        model: config.model,
+        system: systemPrompt,
+        max_tokens: 1024,
+        messages: [
+          { role: "user", content: `Command description: ${commandDescription}` },
+        ],
+      });
+      // @ts-ignore
+      return response.content[0]?.text.trim() || "";
+    }
 
-console.log(response?.choices[0]?.message?.content?.trim());
+    case "Gemini": {
+      const genAI = new GoogleGenerativeAI(config.apiKey);
+      const model = genAI.getGenerativeModel({ model: config.model });
+      const prompt = `${systemPrompt}\n\nCommand description: ${commandDescription}`;
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      return response.text().trim();
+    }
+
+    default:
+      console.error(`Error: Unknown provider type "${config.type}" in config.json.`);
+      process.exit(1);
+  }
+}
+
+// --- Main Execution ---
+try {
+  const command = await generateCommand(config, commandDescription);
+  console.log(command);
+} catch (error: any) {
+  console.error("Error generating command:", error.message);
+  process.exit(1);
+}
