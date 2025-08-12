@@ -68,13 +68,70 @@ mv dist/uwu-cli /usr/local/bin/uwu-cli
 ```
 
 
-### 4. Set your OpenAI API key
-`uwu` requires `OPENAI_API_KEY` to be set in your shell environment.
+### 4. Configuration
+`uwu` is configured through a single `config.json` file. The first time you run `uwu`, it will automatically create a default configuration file to get you started.
 
-```bash
-export OPENAI_API_KEY="your_api_key_here"
+#### Configuration File Location
+The `config.json` file is located in a standard, platform-specific directory:
+*   **Linux:** `~/.config/uwu/config.json`
+*   **macOS:** `~/Library/Application Support/uwu/config.json`
+*   **Windows:** `%APPDATA%\\uwu\\config.json` (e.g., `C:\\Users\\<user>\\AppData\\Roaming\\uwu\\config.json`)
+
+#### Provider Types
+You can configure `uwu` to use different AI providers by setting the `type` field in your `config.json`. The supported types are `"OpenAI"`, `"Custom"`, `"Claude"`, and `"Gemini"`.
+
+Below are examples for each provider type.
+
+---
+##### **1. OpenAI (`type: "OpenAI"`)**
+This is the default configuration.
+```json
+{
+  "type": "OpenAI",
+  "apiKey": "sk-your_openai_api_key",
+  "model": "gpt-4.1"
+}
 ```
-`uwu` uses GPT-5 by default. There is not currently a way to change the model, please consider submitting a PR to add this feature.
+*   `apiKey`: Your OpenAI API key. If this is empty, `uwu` will use the `OPENAI_API_KEY` environment variable.
+
+---
+##### **2. Claude (`type: "Claude"`)**
+Uses the native Anthropic API.
+```json
+{
+  "type": "Claude",
+  "apiKey": "your-anthropic-api-key",
+  "model": "claude-3-opus-20240229"
+}
+```
+*   `apiKey`: Your Anthropic API key.
+
+---
+##### **3. Gemini (`type: "Gemini"`)**
+Uses the native Google Gemini API.
+```json
+{
+  "type": "Gemini",
+  "apiKey": "your-google-api-key",
+  "model": "gemini-pro"
+}
+```
+*   `apiKey`: Your Google AI Studio API key.
+
+---
+##### **4. Custom / Local Models (`type: "Custom"`)**
+This type is for any other OpenAI-compatible API endpoint, such as Ollama, LM Studio, or a third-party proxy service.
+```json
+{
+  "type": "Custom",
+  "model": "llama3",
+  "baseURL": "http://localhost:11434/v1",
+  "apiKey": "ollama"
+}
+```
+*   `model`: The name of the model you want to use (e.g., `"llama3"`).
+*   `baseURL`: The API endpoint for the service.
+*   `apiKey`: An API key, if required by the service. For local models like Ollama, this can often be a non-empty placeholder like `"ollama"`.
 
 ### 5. Add the `uwu` helper function to your `~/.zshrc`
 This function lets you type `uwu <description>` and get an editable command preloaded in your shell.

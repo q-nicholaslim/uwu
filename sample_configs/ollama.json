@@ -1,0 +1,6 @@
+{
+  "type": "Custom",
+  "model": "llama3",
+  "baseURL": "http://localhost:11434/v1",
+  "apiKey": "ollama"
+}
