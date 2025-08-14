@@ -80,8 +80,48 @@ if (!commandDescription) {
   process.exit(1);
 }
 
+
+function sanitizeResponse(content: string): string {
+  if (!content) return "";
+
+
+  content = content.replace(/<\s*think\b[^>]*>[\s\S]*?<\s*\/\s*think\s*>/gi, "");
+
+
+  let lastCodeBlock: string | null = null;
+  const codeBlockRegex = /```(?:[^\n]*)\n([\s\S]*?)```/g;
+  let m;
+  while ((m = codeBlockRegex.exec(content)) !== null) {
+    lastCodeBlock = m[1];
+  }
+  if (lastCodeBlock) {
+    content = lastCodeBlock;
+  } else {
+
+    content = content.replace(/`/g, "");
+  }
+
+
+  const lines = content.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (lines.length === 0) return "";
+
+
+  for (let i = lines.length - 1; i >= 0; i--) {
+    const line = lines[i];
+
+    const looksLikeSentence = /^[A-Z][\s\S]*[.?!]$/.test(line) || /\b(user|want|should|shouldn't|think|explain|error|note)\b/i.test(line);
+    if (!looksLikeSentence && line.length <= 2000) {
+      return line.trim();
+    }
+  }
+
+
+  return lines[lines.length - 1].trim();
+}
+
+
 async function generateCommand(config: Config, commandDescription: string): Promise<string> {
-  // Build the environment context
+
   const envContext = `
 Operating System: ${os.type()} ${os.release()} (${os.platform()} - ${os.arch()})
 Node.js Version: ${process.version}
@@ -93,12 +133,12 @@ Total Memory: ${(os.totalmem() / 1024 / 1024).toFixed(0)} MB
 Free Memory: ${(os.freemem() / 1024 / 1024).toFixed(0)} MB
 `;
 
-  // Get `ls -l` output (handle potential errors)
+
   let lsResult = "";
   try {
     lsResult = await $`ls`.text();
   } catch (error) {
-    // If ls fails, provide fallback information
+
     lsResult = "Unable to get directory listing";
   }
 
@@ -138,7 +178,8 @@ ${lsResult}
           { role: "user", content: `Command description: ${commandDescription}` },
         ],
       });
-      return response?.choices[0]?.message?.content?.trim() || "";
+      const raw = response?.choices?.[0]?.message?.content ?? "";
+      return sanitizeResponse(String(raw));
     }
 
     case "Claude": {
@@ -152,7 +193,8 @@ ${lsResult}
         ],
       });
       // @ts-ignore
-      return response.content[0]?.text.trim() || "";
+      const raw = response.content && response.content[0] ? response.content[0].text : (response?.text ?? "");
+      return sanitizeResponse(String(raw));
     }
 
     case "Gemini": {
@@ -161,7 +203,8 @@ ${lsResult}
       const prompt = `${systemPrompt}\n\nCommand description: ${commandDescription}`;
       const result = await model.generateContent(prompt);
       const response = await result.response;
-      return response.text().trim();
+      const raw = await response.text();
+      return sanitizeResponse(String(raw));
     }
 
     default:
@@ -169,6 +212,7 @@ ${lsResult}
       process.exit(1);
   }
 }
+
 
 // --- Main Execution ---
 try {
