@@ -1,13 +1,15 @@
-import OpenAI from 'openai';
-import Anthropic from '@anthropic-ai/sdk';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
+import ModelClient, { isUnexpected } from "@azure-rest/ai-inference";
+import { AzureKeyCredential } from "@azure/core-auth";
 import { $ } from "bun";
 import os from "os";
 import fs from "fs";
 import path from "path";
 import envPaths from "env-paths";
 
-type ProviderType = "OpenAI" | "Custom" | "Claude" | "Gemini";
+type ProviderType = "OpenAI" | "Custom" | "Claude" | "Gemini" | "GitHub";
 
 interface Config {
   type: ProviderType;
@@ -22,7 +24,7 @@ const DEFAULT_CONFIG: Config = {
 };
 
 function getConfig(): Config {
-  const paths = envPaths('uwu', { suffix: '' });
+  const paths = envPaths("uwu", { suffix: "" });
   const configPath = path.join(paths.config, "config.json");
 
   if (!fs.existsSync(configPath)) {
@@ -63,7 +65,10 @@ function getConfig(): Config {
       apiKey: userConfig.apiKey || process.env.OPENAI_API_KEY,
     };
   } catch (error) {
-    console.error("Error reading or parsing the configuration file at:", configPath);
+    console.error(
+      "Error reading or parsing the configuration file at:",
+      configPath
+    );
     console.error("Please ensure it is a valid JSON file.");
     process.exit(1);
   }
@@ -72,7 +77,7 @@ function getConfig(): Config {
 const config = getConfig();
 
 // The rest of the arguments are the command description
-const commandDescription = process.argv.slice(2).join(' ').trim();
+const commandDescription = process.argv.slice(2).join(" ").trim();
 
 if (!commandDescription) {
   console.error("Error: No command description provided.");
@@ -80,7 +85,10 @@ if (!commandDescription) {
   process.exit(1);
 }
 
-async function generateCommand(config: Config, commandDescription: string): Promise<string> {
+async function generateCommand(
+  config: Config,
+  commandDescription: string
+): Promise<string> {
   // Build the environment context
   const envContext = `
 Operating System: ${os.type()} ${os.release()} (${os.platform()} - ${os.arch()})
@@ -120,7 +128,9 @@ ${lsResult}
 
   if (!config.apiKey) {
     console.error("Error: API key not found.");
-    console.error("Please provide an API key in your config.json file or by setting the OPENAI_API_KEY environment variable.");
+    console.error(
+      "Please provide an API key in your config.json file or by setting the OPENAI_API_KEY environment variable."
+    );
     process.exit(1);
   }
 
@@ -135,7 +145,10 @@ ${lsResult}
         model: config.model,
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Command description: ${commandDescription}` },
+          {
+            role: "user",
+            content: `Command description: ${commandDescription}`,
+          },
         ],
       });
       return response?.choices[0]?.message?.content?.trim() || "";
@@ -148,7 +161,10 @@ ${lsResult}
         system: systemPrompt,
         max_tokens: 1024,
         messages: [
-          { role: "user", content: `Command description: ${commandDescription}` },
+          {
+            role: "user",
+            content: `Command description: ${commandDescription}`,
+          },
         ],
       });
       // @ts-ignore
@@ -164,8 +180,44 @@ ${lsResult}
       return response.text().trim();
     }
 
+    case "GitHub": {
+      const endpoint = config.baseURL
+        ? config.baseURL
+        : "https://models.github.ai/inference";
+
+      const model = config.model ? config.model : "openai/gpt-4.1-nano";
+      const github = ModelClient(
+        endpoint,
+        new AzureKeyCredential(config.apiKey)
+      );
+
+      const response = await github.path("/chat/completions").post({
+        body: {
+          messages: [
+            { role: "system", content: systemPrompt },
+            {
+              role: "user",
+              content: `Command description: ${commandDescription}`,
+            },
+          ],
+          temperature: 1.0,
+          top_p: 1.0,
+          model: model,
+        },
+      });
+
+      if (isUnexpected(response)) {
+        throw response.body.error;
+      }
+
+      const content = response.body.choices?.[0]?.message?.content;
+      return content?.trim() || "";
+    }
+
     default:
-      console.error(`Error: Unknown provider type "${config.type}" in config.json.`);
+      console.error(
+        `Error: Unknown provider type "${config.type}" in config.json.`
+      );
       process.exit(1);
   }
 }
