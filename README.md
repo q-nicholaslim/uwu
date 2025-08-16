@@ -206,6 +206,18 @@ After editing `~/.zshrc`, reload it:
 source ~/.zshrc
 ```
 
+#### bash
+```bash
+uwu() {
+  local cmd
+  cmd="$(uwu-cli "$@")" || return
+  # requires interactive shell and Bash 4+
+  read -e -i "$cmd" -p "" cmd || return
+  builtin history -s -- "$cmd"
+  eval -- "$cmd"
+}
+```
+
 ## Usage
 
 Once installed and configured:
