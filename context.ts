@@ -22,7 +22,22 @@ function getHistoryFilePath(): string | null {
   } else if (shell.includes("bash")) {
     return process.env.HISTFILE || path.join(home, ".bash_history");
   } else if (shell.includes("fish")) {
-    return path.join(home, ".local", "share", "fish", "fish_history");
+    const macFish = path.join(
+      home,
+      "Library",
+      "Application Support",
+      "fish",
+      "fish_history"
+    );
+    const linuxFish = path.join(
+      home,
+      ".local",
+      "share",
+      "fish",
+      "fish_history"
+    );
+    if (fs.existsSync(macFish)) return macFish;
+    return linuxFish;
   }
 
   // Try common paths as fallback
@@ -30,6 +45,7 @@ function getHistoryFilePath(): string | null {
     path.join(home, ".zsh_history"),
     path.join(home, ".bash_history"),
     path.join(home, ".local", "share", "fish", "fish_history"),
+    path.join(home, "Library", "Application Support", "fish", "fish_history"),
   ];
 
   for (const histPath of commonPaths) {
@@ -41,56 +57,53 @@ function getHistoryFilePath(): string | null {
   return null;
 }
 
-function parseShellHistory(historyPath: string, maxCommands: number): string[] {
+/**
+ * Efficiently read the last N non-empty lines of a file without loading the whole file.
+ */
+function readLastLines(
+  filePath: string,
+  maxLines: number,
+  chunkSize = 64 * 1024
+): string[] {
+  let fd: number | null = null;
   try {
-    const content = fs.readFileSync(historyPath, "utf-8");
-    const lines = content.split("\n").filter((line) => line.trim());
-    const commands: string[] = [];
+    fd = fs.openSync(filePath, "r");
+    const { size } = fs.fstatSync(fd);
+    if (size === 0) return [];
 
-    // Detect shell type from path or content
-    if (historyPath.includes("zsh")) {
-      // zsh format: : timestamp:0;command
-      for (const line of lines) {
-        const match = line.match(/^:\s*\d+:\d+;(.*)$/);
-        if (match && match[1]) {
-          commands.push(match[1]);
-        } else if (!line.startsWith(":")) {
-          // Multi-line commands continuation
-          if (commands.length > 0) {
-            commands[commands.length - 1] += "\n" + line;
-          }
-        }
-      }
-    } else if (historyPath.includes("fish")) {
-      // fish format: - cmd: command
-      for (let i = 0; i < lines.length; i++) {
-        const lineMatch = lines[i]?.match(/^- cmd:\s*(.*)$/);
-        if (lineMatch && lineMatch[1]) {
-          let cmd = lineMatch[1];
-          // Handle multi-line commands in fish
-          while (i + 1 < lines.length && lines[i + 1]?.startsWith("  ")) {
-            i++;
-            const nextLine = lines[i];
-            if (nextLine) {
-              cmd += "\n" + nextLine.substring(2);
-            }
-          }
-          commands.push(cmd);
-        }
-      }
-    } else {
-      // bash format: plain commands, skip lines starting with #
-      for (const line of lines) {
-        if (!line.startsWith("#") && line.trim()) {
-          commands.push(line);
-        }
-      }
+    let position = size;
+    let accumulator = "";
+    const buffer = Buffer.allocUnsafe(Math.min(chunkSize, size));
+
+    const hasEnoughLines = () =>
+      (accumulator.match(/\n/g)?.length || 0) >= maxLines + 1;
+
+    while (position > 0 && !hasEnoughLines()) {
+      const readLength = Math.min(buffer.length, position);
+      position -= readLength;
+      fs.readSync(fd, buffer, 0, readLength, position);
+      accumulator = buffer.toString("utf8", 0, readLength) + accumulator;
     }
 
-    // Return the last N commands
-    return commands.slice(-maxCommands);
-  } catch (error) {
-    // Fail gracefully - history is optional
+    const allLines = accumulator.split("\n");
+    const nonEmpty = allLines.filter((l) => l.trim());
+    return nonEmpty.slice(-maxLines);
+  } catch {
+    return [];
+  } finally {
+    if (fd !== null) {
+      try {
+        fs.closeSync(fd);
+      } catch {}
+    }
+  }
+}
+
+function parseShellHistory(historyPath: string, maxCommands: number): string[] {
+  try {
+    // Include full raw lines from the history file for richer context
+    return readLastLines(historyPath, maxCommands);
+  } catch {
     return [];
   }
 }

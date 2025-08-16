@@ -74,7 +74,7 @@ mv dist/uwu-cli /usr/local/bin/uwu-cli
 The `config.json` file is located in a standard, platform-specific directory:
 
 - **Linux:** `~/.config/uwu/config.json`
-- **macOS:** `~/Library/Application Support/uwu/config.json`
+- **macOS:** `~/Library/Preferences/uwu/config.json`
 - **Windows:** `%APPDATA%\\uwu\\config.json` (e.g., `C:\\Users\\<user>\\AppData\\Roaming\\uwu\\config.json`)
 
 #### Provider Types
@@ -154,7 +154,7 @@ This type is for any other OpenAI-compatible API endpoint, such as Ollama, LM St
 
 #### Context Configuration (Optional)
 
-`uwu` can include recent command history from your shell to provide better context for command generation. This feature is disabled by default but can be enabled:
+`uwu` can include recent command history from your shell to provide better context for command generation. This feature is disabled by default but can be enabled. When enabled, `uwu` includes the raw last N lines from your shell history (e.g., bash, zsh, fish), preserving any extra metadata your shell records:
 
 ```json
 {

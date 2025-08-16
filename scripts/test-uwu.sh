@@ -10,7 +10,7 @@ if [ -z "$OPENAI_API_KEY" ]; then
     echo ""
     echo "Or add it to your config file at:"
     if [[ "$OSTYPE" == darwin* ]]; then
-        echo "  ~/Library/Application Support/uwu/config.json"
+        echo "  ~/Library/Preferences/uwu/config.json"
     else
         echo "  ~/.config/uwu/config.json"
     fi
@@ -22,6 +22,13 @@ echo ""
 
 # Test 1: Basic command without context
 echo "Test 1: Basic command (context disabled by default)"
+
+# Ensure binary exists
+if [ ! -x "./dist/uwu-cli" ]; then
+    echo "Building uwu-cli..."
+    bun run build || { echo "Build failed"; exit 1; }
+fi
+
 echo "Running: ./dist/uwu-cli 'list files in current directory'"
 ./dist/uwu-cli "list files in current directory"
 echo ""
@@ -29,7 +36,7 @@ echo ""
 # Create a config with context enabled
 CONFIG_DIR=""
 if [[ "$OSTYPE" == darwin* ]]; then
-    CONFIG_DIR="$HOME/Library/Application Support/uwu"
+    CONFIG_DIR="$HOME/Library/Preferences/uwu"
 else
     CONFIG_DIR="$HOME/.config/uwu"
 fi
