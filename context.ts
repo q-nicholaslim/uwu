@@ -12,6 +12,10 @@ export const DEFAULT_CONTEXT_CONFIG: ContextConfig = {
   maxHistoryCommands: 10,
 };
 
+// Size of each backwards-read chunk when scanning shell history files.
+// Unit: bytes. 64 KiB balances I/O efficiency with memory usage.
+const HISTORY_READ_CHUNK_SIZE_BYTES = 64 * 1024;
+
 // Shell history parsing functions
 function getHistoryFilePath(): string | null {
   const shell = process.env.SHELL || "";
@@ -59,12 +63,17 @@ function getHistoryFilePath(): string | null {
 
 /**
  * Efficiently read the last N non-empty lines of a file without loading the whole file.
+ *
+ * Reads the file from the end in fixed-size chunks to avoid loading it entirely.
+ * Chunk size is defined by `HISTORY_READ_CHUNK_SIZE_BYTES` (bytes).
  */
-function readLastLines(
-  filePath: string,
-  maxLines: number,
-  chunkSize = 64 * 1024
-): string[] {
+function readLastLines({
+  filePath,
+  maxLines,
+}: {
+  filePath: string;
+  maxLines: number;
+}): string[] {
   let fd: number | null = null;
   try {
     fd = fs.openSync(filePath, "r");
@@ -73,7 +82,9 @@ function readLastLines(
 
     let position = size;
     let accumulator = "";
-    const buffer = Buffer.allocUnsafe(Math.min(chunkSize, size));
+    const buffer = Buffer.allocUnsafe(
+      Math.min(HISTORY_READ_CHUNK_SIZE_BYTES, size)
+    );
 
     const hasEnoughLines = () =>
       (accumulator.match(/\n/g)?.length || 0) >= maxLines + 1;
@@ -99,41 +110,39 @@ function readLastLines(
   }
 }
 
-function parseShellHistory(historyPath: string, maxCommands: number): string[] {
-  try {
-    // Include full raw lines from the history file for richer context
-    return readLastLines(historyPath, maxCommands);
-  } catch {
-    return [];
-  }
-}
-
 function getRecentCommands(maxCommands: number): string[] {
   const historyPath = getHistoryFilePath();
   if (!historyPath) {
     return [];
   }
 
-  return parseShellHistory(historyPath, maxCommands);
+  try {
+    // Include full raw lines from the history file for richer context
+    return readLastLines({ filePath: historyPath, maxLines: maxCommands });
+  } catch {
+    return [];
+  }
 }
 
 export function buildContextHistory(contextConfig: ContextConfig): string {
+  if (!contextConfig.enabled) {
+    return "";
+  }
+
   let historyContext = "";
 
-  if (contextConfig.enabled === true) {
-    // Get recent commands
-    const recentCommands = getRecentCommands(
-      contextConfig.maxHistoryCommands ||
-        DEFAULT_CONTEXT_CONFIG.maxHistoryCommands!
-    );
-    if (recentCommands.length > 0) {
-      historyContext += "\n--- RECENT COMMANDS ---\n";
-      historyContext += "Recent shell commands (most recent last):\n";
-      recentCommands.forEach((cmd, idx) => {
-        historyContext += `${idx + 1}. ${cmd}\n`;
-      });
-      historyContext += "--- END COMMAND HISTORY ---\n";
-    }
+  // Get recent commands
+  const recentCommands = getRecentCommands(
+    contextConfig.maxHistoryCommands ||
+      DEFAULT_CONTEXT_CONFIG.maxHistoryCommands!
+  );
+  if (recentCommands.length > 0) {
+    historyContext += "\n--- RECENT COMMANDS ---\n";
+    historyContext += "Recent shell commands (most recent last):\n";
+    recentCommands.forEach((cmd, idx) => {
+      historyContext += `${idx + 1}. ${cmd}\n`;
+    });
+    historyContext += "--- END COMMAND HISTORY ---\n";
   }
 
   return historyContext;

@@ -172,6 +172,10 @@ This type is for any other OpenAI-compatible API endpoint, such as Ollama, LM St
 - `maxHistoryCommands`: Number of recent commands to include (default: `10`)
   When enabled, `uwu` automatically detects and parses history from bash, zsh, and fish shells.
 
+##### Notes on history scanning performance
+
+- **Chunk size unit**: When scanning shell history files, `uwu` reads from the end of the file in fixed-size chunks of 64 KiB. This is not currently configurable but can be made if desired.
+
 ### 5. Add the `uwu` helper function to your `~/.zshrc`
 
 This function lets you type `uwu <description>` and get an editable command preloaded in your shell.
