@@ -34,21 +34,21 @@
 
 `uwu` is not a replacement for comprehensive agentic development tools -- it is simple tool that excels at one thing. Consider it the terminal equivalent of quickly searching "how do I..." and getting an immediately runnable answer.
 
+
 ![uwu demo](https://raw.githubusercontent.com/context-labs/uwu/main/assets/uwu.gif)
 
 After a response is generated, you can edit it before pressing enter to execute the command. This is useful if you want to add flags, or other modifications to the command.
 
+
 ## Installation
 
 ### 1. Clone the repo
-
 ```bash
 git clone https://github.com/context-labs/uwu.git
 cd uwu
 ```
 
 ### 2. Install dependencies and build
-
 Make sure you have [Bun](https://bun.sh) installed.
 
 ```bash
@@ -58,37 +58,31 @@ bun run build
 
 This will produce the `uwu-cli` binary in the `dist/` build output directory.
 
-### 3. Make the binary executable and move it into your PATH
 
+### 3. Make the binary executable and move it into your PATH
 ```bash
 chmod +x dist/uwu-cli
 mv dist/uwu-cli /usr/local/bin/uwu-cli
 ```
 
-### 4. Configuration
 
+### 4. Configuration
 `uwu` is configured through a single `config.json` file. The first time you run `uwu`, it will automatically create a default configuration file to get you started.
 
 #### Configuration File Location
-
 The `config.json` file is located in a standard, platform-specific directory:
-
-- **Linux:** `~/.config/uwu/config.json`
-- **macOS:** `~/Library/Application Support/uwu/config.json`
-- **Windows:** `%APPDATA%\\uwu\\config.json` (e.g., `C:\\Users\\<user>\\AppData\\Roaming\\uwu\\config.json`)
+*   **Linux:** `~/.config/uwu/config.json`
+*   **macOS:** `~/Library/Application Support/uwu/config.json`
+*   **Windows:** `%APPDATA%\\uwu\\config.json` (e.g., `C:\\Users\\<user>\\AppData\\Roaming\\uwu\\config.json`)
 
 #### Provider Types
-
 You can configure `uwu` to use different AI providers by setting the `type` field in your `config.json`. The supported types are `"OpenAI"`, `"Custom"`, `"Claude"`, `"Gemini"`, and `"GitHub"`.
 
 Below are examples for each provider type.
 
 ---
-
 ##### **1. OpenAI (`type: "OpenAI"`)**
-
 This is the default configuration.
-
 ```json
 {
   "type": "OpenAI",
@@ -96,15 +90,11 @@ This is the default configuration.
   "model": "gpt-4.1"
 }
 ```
-
-- `apiKey`: Your OpenAI API key. If this is empty, `uwu` will use the `OPENAI_API_KEY` environment variable.
+*   `apiKey`: Your OpenAI API key. If this is empty, `uwu` will use the `OPENAI_API_KEY` environment variable.
 
 ---
-
 ##### **2. Claude (`type: "Claude"`)**
-
 Uses the native Anthropic API.
-
 ```json
 {
   "type": "Claude",
@@ -112,15 +102,11 @@ Uses the native Anthropic API.
   "model": "claude-3-opus-20240229"
 }
 ```
-
-- `apiKey`: Your Anthropic API key.
+*   `apiKey`: Your Anthropic API key.
 
 ---
-
 ##### **3. Gemini (`type: "Gemini"`)**
-
 Uses the native Google Gemini API.
-
 ```json
 {
   "type": "Gemini",
@@ -128,15 +114,11 @@ Uses the native Google Gemini API.
   "model": "gemini-pro"
 }
 ```
-
-- `apiKey`: Your Google AI Studio API key.
+*   `apiKey`: Your Google AI Studio API key.
 
 ---
-
 ##### **4. GitHub (`type: "GitHub"`)**
-
 Uses multiple free to use GitHub models.
-
 ```json
 {
   "type": "GitHub",
@@ -144,15 +126,10 @@ Uses multiple free to use GitHub models.
   "model": "openai/gpt-4.1-nano"
 }
 ```
-
-- `apiKey`: Your GitHub token.
-
+*   `apiKey`: Your GitHub token.
 ---
-
 ##### **5. Custom / Local Models (`type: "Custom"`)**
-
 This type is for any other OpenAI-compatible API endpoint, such as Ollama, LM Studio, or a third-party proxy service.
-
 ```json
 {
   "type": "Custom",
@@ -161,13 +138,11 @@ This type is for any other OpenAI-compatible API endpoint, such as Ollama, LM St
   "apiKey": "ollama"
 }
 ```
-
-- `model`: The name of the model you want to use (e.g., `"llama3"`).
-- `baseURL`: The API endpoint for the service.
-- `apiKey`: An API key, if required by the service. For local models like Ollama, this can often be a non-empty placeholder like `"ollama"`.
+*   `model`: The name of the model you want to use (e.g., `"llama3"`).
+*   `baseURL`: The API endpoint for the service.
+*   `apiKey`: An API key, if required by the service. For local models like Ollama, this can often be a non-empty placeholder like `"ollama"`.
 
 ### 5. Add the `uwu` helper function to your `~/.zshrc`
-
 This function lets you type `uwu <description>` and get an editable command preloaded in your shell.
 
 ```zsh
@@ -183,9 +158,20 @@ uwu() {
 ```
 
 After editing `~/.zshrc`, reload it:
-
 ```bash
 source ~/.zshrc
+```
+
+#### bash
+```bash
+uwu() {
+  local cmd
+  cmd="$(uwu-cli "$@")" || return
+  # requires interactive shell and Bash 4+
+  read -e -i "$cmd" -p "" cmd || return
+  builtin history -s -- "$cmd"
+  eval -- "$cmd"
+}
 ```
 
 ## Usage
