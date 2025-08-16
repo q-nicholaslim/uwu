@@ -1,11 +1,13 @@
-import OpenAI from 'openai';
-import Anthropic from '@anthropic-ai/sdk';
-import { GoogleGenerativeAI } from '@google/generative-ai';
+import OpenAI from "openai";
+import Anthropic from "@anthropic-ai/sdk";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import { $ } from "bun";
 import os from "os";
 import fs from "fs";
 import path from "path";
 import envPaths from "env-paths";
+import { DEFAULT_CONTEXT_CONFIG, buildContextHistory } from "./context";
+import type { ContextConfig } from "./context";
 
 type ProviderType = "OpenAI" | "Custom" | "Claude" | "Gemini";
 
@@ -14,15 +16,17 @@ interface Config {
   apiKey?: string;
   model: string;
   baseURL?: string;
+  context?: ContextConfig;
 }
 
 const DEFAULT_CONFIG: Config = {
   type: "OpenAI",
   model: "gpt-4.1",
+  context: DEFAULT_CONTEXT_CONFIG,
 };
 
 function getConfig(): Config {
-  const paths = envPaths('uwu', { suffix: '' });
+  const paths = envPaths("uwu", { suffix: "" });
   const configPath = path.join(paths.config, "config.json");
 
   if (!fs.existsSync(configPath)) {
@@ -57,13 +61,28 @@ function getConfig(): Config {
     const userConfig = JSON.parse(rawConfig);
 
     // Merge user config with defaults, and also check env for API key as a fallback.
-    return {
+    const mergedConfig = {
       ...DEFAULT_CONFIG,
       ...userConfig,
       apiKey: userConfig.apiKey || process.env.OPENAI_API_KEY,
     };
+
+    // Ensure context config has all defaults filled in
+    if (mergedConfig.context) {
+      mergedConfig.context = {
+        ...DEFAULT_CONTEXT_CONFIG,
+        ...mergedConfig.context,
+      };
+    } else {
+      mergedConfig.context = DEFAULT_CONTEXT_CONFIG;
+    }
+
+    return mergedConfig;
   } catch (error) {
-    console.error("Error reading or parsing the configuration file at:", configPath);
+    console.error(
+      "Error reading or parsing the configuration file at:",
+      configPath
+    );
     console.error("Please ensure it is a valid JSON file.");
     process.exit(1);
   }
@@ -72,7 +91,7 @@ function getConfig(): Config {
 const config = getConfig();
 
 // The rest of the arguments are the command description
-const commandDescription = process.argv.slice(2).join(' ').trim();
+const commandDescription = process.argv.slice(2).join(" ").trim();
 
 if (!commandDescription) {
   console.error("Error: No command description provided.");
@@ -80,13 +99,13 @@ if (!commandDescription) {
   process.exit(1);
 }
 
-
 function sanitizeResponse(content: string): string {
   if (!content) return "";
 
-
-  content = content.replace(/<\s*think\b[^>]*>[\s\S]*?<\s*\/\s*think\s*>/gi, "");
-
+  content = content.replace(
+    /<\s*think\b[^>]*>[\s\S]*?<\s*\/\s*think\s*>/gi,
+    ""
+  );
 
   let lastCodeBlock: string | null = null;
   const codeBlockRegex = /```(?:[^\n]*)\n([\s\S]*?)```/g;
@@ -97,31 +116,33 @@ function sanitizeResponse(content: string): string {
   if (lastCodeBlock) {
     content = lastCodeBlock;
   } else {
-
     content = content.replace(/`/g, "");
   }
 
-
-  const lines = content.split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  const lines = content
+    .split(/\r?\n/)
+    .map((l) => l.trim())
+    .filter(Boolean);
   if (lines.length === 0) return "";
-
 
   for (let i = lines.length - 1; i >= 0; i--) {
     const line = lines[i];
 
-    const looksLikeSentence = /^[A-Z][\s\S]*[.?!]$/.test(line) || /\b(user|want|should|shouldn't|think|explain|error|note)\b/i.test(line);
+    const looksLikeSentence =
+      /^[A-Z][\s\S]*[.?!]$/.test(line) ||
+      /\b(user|want|should|shouldn't|think|explain|error|note)\b/i.test(line);
     if (!looksLikeSentence && line.length <= 2000) {
       return line.trim();
     }
   }
 
-
   return lines[lines.length - 1].trim();
 }
 
-
-async function generateCommand(config: Config, commandDescription: string): Promise<string> {
-
+async function generateCommand(
+  config: Config,
+  commandDescription: string
+): Promise<string> {
   const envContext = `
 Operating System: ${os.type()} ${os.release()} (${os.platform()} - ${os.arch()})
 Node.js Version: ${process.version}
@@ -133,14 +154,22 @@ Total Memory: ${(os.totalmem() / 1024 / 1024).toFixed(0)} MB
 Free Memory: ${(os.freemem() / 1024 / 1024).toFixed(0)} MB
 `;
 
-
+  // Get directory listing (`ls` on Unix, `dir` on Windows)
   let lsResult = "";
   try {
-    lsResult = await $`ls`.text();
+    if (process.platform === "win32") {
+      // Use PowerShell-compatible dir for a simple listing
+      lsResult = await $`cmd /c dir /b`.text();
+    } else {
+      lsResult = await $`ls`.text();
+    }
   } catch (error) {
-
     lsResult = "Unable to get directory listing";
   }
+
+  // Build command history context if enabled
+  const contextConfig = config.context || DEFAULT_CONTEXT_CONFIG;
+  const historyContext = buildContextHistory(contextConfig);
 
   // System prompt
   const systemPrompt = `
@@ -156,11 +185,13 @@ ${envContext}
 
 Result of \`ls -l\` in working directory:
 ${lsResult}
-`;
+${historyContext}`;
 
   if (!config.apiKey) {
     console.error("Error: API key not found.");
-    console.error("Please provide an API key in your config.json file or by setting the OPENAI_API_KEY environment variable.");
+    console.error(
+      "Please provide an API key in your config.json file or by setting the OPENAI_API_KEY environment variable."
+    );
     process.exit(1);
   }
 
@@ -175,7 +206,10 @@ ${lsResult}
         model: config.model,
         messages: [
           { role: "system", content: systemPrompt },
-          { role: "user", content: `Command description: ${commandDescription}` },
+          {
+            role: "user",
+            content: `Command description: ${commandDescription}`,
+          },
         ],
       });
       const raw = response?.choices?.[0]?.message?.content ?? "";
@@ -189,11 +223,17 @@ ${lsResult}
         system: systemPrompt,
         max_tokens: 1024,
         messages: [
-          { role: "user", content: `Command description: ${commandDescription}` },
+          {
+            role: "user",
+            content: `Command description: ${commandDescription}`,
+          },
         ],
       });
       // @ts-ignore
-      const raw = response.content && response.content[0] ? response.content[0].text : (response?.text ?? "");
+      const raw =
+        response.content && response.content[0]
+          ? response.content[0].text
+          : response?.text ?? "";
       return sanitizeResponse(String(raw));
     }
 
@@ -208,11 +248,12 @@ ${lsResult}
     }
 
     default:
-      console.error(`Error: Unknown provider type "${config.type}" in config.json.`);
+      console.error(
+        `Error: Unknown provider type "${config.type}" in config.json.`
+      );
       process.exit(1);
   }
 }
-
 
 // --- Main Execution ---
 try {
