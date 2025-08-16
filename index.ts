@@ -115,10 +115,15 @@ Total Memory: ${(os.totalmem() / 1024 / 1024).toFixed(0)} MB
 Free Memory: ${(os.freemem() / 1024 / 1024).toFixed(0)} MB
 `;
 
-  // Get `ls -l` output (handle potential errors)
+  // Get directory listing (`ls` on Unix, `dir` on Windows)
   let lsResult = "";
   try {
-    lsResult = await $`ls`.text();
+    if (process.platform === "win32") {
+      // Use PowerShell-compatible dir for a simple listing
+      lsResult = await $`cmd /c dir /b`.text();
+    } else {
+      lsResult = await $`ls`.text();
+    }
   } catch (error) {
     // If ls fails, provide fallback information
     lsResult = "Unable to get directory listing";

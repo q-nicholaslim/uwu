@@ -176,6 +176,14 @@ This type is for any other OpenAI-compatible API endpoint, such as Ollama, LM St
 
 - **Chunk size unit**: When scanning shell history files, `uwu` reads from the end of the file in fixed-size chunks of 64 KiB. This is not currently configurable but can be made if desired.
 
+##### Windows notes
+
+- **History detection**: On Windows, `uwu` searches for PowerShell PSReadLine history at:
+  - `%APPDATA%\Microsoft\Windows\PowerShell\PSReadLine\ConsoleHost_history.txt` (Windows PowerShell 5.x)
+  - `%APPDATA%\Microsoft\PowerShell\PSReadLine\ConsoleHost_history.txt` (PowerShell 7+)
+    If not found, it falls back to Unix-like history files that may exist when using Git Bash/MSYS/Cygwin (e.g., `.bash_history`, `.zsh_history`).
+- **Directory listing**: On Windows, directory listing uses `dir /b`; on Linux/macOS it uses `ls`.
+
 ### 5. Add the `uwu` helper function to your `~/.zshrc`
 
 This function lets you type `uwu <description>` and get an editable command preloaded in your shell.

@@ -20,6 +20,36 @@ const HISTORY_READ_CHUNK_SIZE_BYTES = 64 * 1024;
 function getHistoryFilePath(): string | null {
   const shell = process.env.SHELL || "";
   const home = os.homedir();
+  const isWindows = process.platform === "win32";
+
+  // Windows: Prefer PowerShell PSReadLine history if available
+  if (isWindows) {
+    const appData =
+      process.env.APPDATA || path.join(home, "AppData", "Roaming");
+    const psHistoryCandidates = [
+      // Windows PowerShell 5.x
+      path.join(
+        appData,
+        "Microsoft",
+        "Windows",
+        "PowerShell",
+        "PSReadLine",
+        "ConsoleHost_history.txt"
+      ),
+      // PowerShell 7+
+      path.join(
+        appData,
+        "Microsoft",
+        "PowerShell",
+        "PSReadLine",
+        "ConsoleHost_history.txt"
+      ),
+    ];
+    for (const psPath of psHistoryCandidates) {
+      if (fs.existsSync(psPath)) return psPath;
+    }
+    // If nothing found on Windows, fall through to shared fallbacks that may exist under Git Bash, MSYS, or Cygwin
+  }
 
   if (shell.includes("zsh")) {
     return process.env.HISTFILE || path.join(home, ".zsh_history");
