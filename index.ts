@@ -158,12 +158,15 @@ Free Memory: ${(os.freemem() / 1024 / 1024).toFixed(0)} MB
 
   // Get directory listing (`ls` on Unix, `dir` on Windows)
   let lsResult = "";
+  let lsCommand = "";
   try {
     if (process.platform === "win32") {
       // Use PowerShell-compatible dir for a simple listing
-      lsResult = await $`cmd /c dir /b`.text();
+      lsCommand = "dir /b";
+      lsResult = await $`cmd /c ${lsCommand}`.text();
     } else {
-      lsResult = await $`ls`.text();
+      lsCommand = "ls";
+      lsResult = await $`${lsCommand}`.text();
     }
   } catch (error) {
     lsResult = "Unable to get directory listing";
@@ -177,7 +180,7 @@ Free Memory: ${(os.freemem() / 1024 / 1024).toFixed(0)} MB
   const systemPrompt = `
 You live in a developer's CLI, helping them convert natural language into CLI commands. 
 Based on the description of the command given, generate the command. Output only the command and nothing else. 
-Make sure to escape characters when appropriate. The result of \`ls -l\` is given with the command. 
+Make sure to escape characters when appropriate. The result of \`${lsCommand}\` is given with the command. 
 This may be helpful depending on the description given. Do not include any other text in your response, except for the command.
 Do not wrap the command in quotes.
 
@@ -185,7 +188,7 @@ Do not wrap the command in quotes.
 ${envContext}
 --- END ENVIRONMENT CONTEXT ---
 
-Result of \`ls -l\` in working directory:
+Result of \`${lsCommand}\` in working directory:
 ${lsResult}
 ${historyContext}`;
 
